@@ -28,6 +28,7 @@ var (
 	instrType, instrFmt []*gtk.ComboBoxText
 	typeRenameButton    [maxTypes]*gtk.Button
 	formatRenameButton  [maxFormats]*gtk.Button
+	insertInstrButton   *gtk.Button
 	// instrSaveButton                 [maxInstrs]*gtk.Button
 	numTypes, numFormats, numInstrs int
 )
@@ -278,8 +279,16 @@ func loadCSV() {
 			instrType[numInstrs].SetActive(t)
 			numInstrs++
 		}
-		instrTable.Resize(uint(numInstrs), 6)
-
+		insertInstrButton = gtk.NewButtonWithLabel("Insert")
+		instrTable.Attach(insertInstrButton, 7, 8, uint(numInstrs), uint(numInstrs)+1, gtk.FILL, gtk.FILL, 1, 1)
+		insertInstrButton.Connect(
+			"clicked",
+			func(ctx *glib.CallbackContext) {
+				insertInstruction(ctx)
+			},
+			numInstrs)
+		insertInstrButton.Show()
+		//instrTable.Resize(uint(numInstrs+1), 7)
 
 		csvFile.Close()
 	}
@@ -366,6 +375,10 @@ func exportGo() {
 		goFile.Close()
 	}
 	dialog.Destroy()
+}
+
+func insertInstruction(ctx *glib.CallbackContext) {
+	log.Printf("Not yet...(%d)\n", ctx.Data().(uint))
 }
 
 func renameFormat(ctx *glib.CallbackContext) {
