@@ -239,7 +239,7 @@ func loadCSV() {
 			break
 		}
 		row := make([]string, 6)
-		for c := 0; c < 6; c++ {
+		for c := 0; c < instrAttrs; c++ {
 			row[c] = line[c]
 		}
 		instrsTable[numInstrs] = row
@@ -436,5 +436,27 @@ func insertInstr() {
 	}
 	log.Println("Dialog Accepted")
 	log.Printf("New Mnemonic is: %s\n", mnemEdit.Text())
-
+	var afterNew int
+	for afterNew = 0; afterNew < numInstrs; afterNew++ {
+		if instrsTable[afterNew][0] > mnemEdit.Text() {
+			break
+		}
+	}
+	newIx := afterNew
+	instrsModel.BeginResetModel()
+	for shuffle := numInstrs; shuffle >= newIx; shuffle-- {
+		row := make([]string, 6)
+		for c := 0; c < instrAttrs; c++ {
+			row[c] = instrsTable[shuffle-1][c]
+		}
+		instrsTable[shuffle] = row
+	}
+	instrsTable[newIx][0] = mnemEdit.Text()
+	instrsTable[newIx][1] = bitsEdit.Text()
+	instrsTable[newIx][2] = maskEdit.Text()
+	instrsTable[newIx][3] = lenEdit.Text()
+	instrsTable[newIx][4] = fmtCombo.CurrentText()
+	instrsTable[newIx][5] = typCombo.CurrentText()
+	numInstrs++
+	instrsModel.EndResetModel()
 }
