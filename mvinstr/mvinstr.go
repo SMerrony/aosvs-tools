@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/therecipe/qt/core"
 	"github.com/therecipe/qt/widgets"
@@ -15,6 +16,7 @@ const (
 	maxTypes   = 20
 	maxFormats = 40
 	maxInstrs  = 500
+	instrAttrs = 6
 )
 
 var (
@@ -22,13 +24,16 @@ var (
 	widget    *widgets.QWidget
 	tabWidget *widgets.QTabWidget
 
-	typesList, formatsList   []string
+	iiAction *widgets.QAction
+
+	typesList                [maxTypes]string
+	formatsList              [maxFormats]string
 	typesModel, formatsModel *core.QAbstractListModel
-	instrsTable              [][]string
+	instrsTable              [maxInstrs][]string
 	instrsModel              *core.QAbstractTableModel
 	instrsView               *widgets.QTableView
-
-	err error
+	headers                  = [...]string{"#", "Mnem", "Bits", "BitMask", "Len", "Instruction Format", "Instruction Type"}
+	err                      error
 
 	numTypes, numFormats, numInstrs int
 )
@@ -69,6 +74,13 @@ func populateMenus() {
 
 	em := fileMenu.AddAction("&Quit")
 	em.ConnectTriggered(func(checked bool) { window.Close() })
+
+	editMenu := window.MenuBar().AddMenu2("&Edit")
+
+	iiAction = editMenu.AddAction("Insert &Instruction")
+	iiAction.SetDisabled(true)
+	iiAction.ConnectTriggered(func(checked bool) { insertInstr() })
+
 }
 
 func createTypeFrame() {
@@ -107,7 +119,6 @@ func createFormatFrame() {
 }
 
 func createInstrFrame() {
-	instrsTable = [][]string{0: {"", "", "", "", "", "", ""}}
 	instrsView = widgets.NewQTableView(nil)
 	instrsModel = core.NewQAbstractTableModel(nil)
 
@@ -118,13 +129,26 @@ func createInstrFrame() {
 		return len(instrsTable[0])
 	})
 	instrsModel.ConnectData(func(index *core.QModelIndex, instr int) *core.QVariant {
-		if instr != int(core.Qt__DisplayRole) {
-			return core.NewQVariant()
+		if index.Row() < numInstrs && index.Column() < instrAttrs && instr == int(core.Qt__DisplayRole) {
+			return core.NewQVariant14(instrsTable[index.Row()][index.Column()])
 		}
-		return core.NewQVariant14(instrsTable[index.Row()][index.Column()])
+		return core.NewQVariant()
 	})
+	instrsModel.ConnectHeaderData(headerData)
+
 	instrsView.SetModel(instrsModel)
+
 	tabWidget.AddTab(instrsView, "Instructions")
+}
+
+func headerData(section int, orientation core.Qt__Orientation, role int) *core.QVariant {
+	if orientation == core.Qt__Horizontal && role == int(core.Qt__DisplayRole) {
+		return core.NewQVariant14(headers[section+1])
+	}
+	if orientation == core.Qt__Vertical && role == int(core.Qt__DisplayRole) {
+		return core.NewQVariant14(strconv.Itoa(section)) //headers[section])
+	}
+	return core.NewQVariant()
 }
 
 func loadCSV() {
@@ -158,6 +182,12 @@ func loadCSV() {
 		return
 	}
 
+	// reset data counts
+	numTypes = 0
+	numInstrs = 0
+	numInstrs = 0
+	iiAction.SetDisabled(true)
+
 	typesModel.BeginResetModel()
 	numTypes = 0
 	for {
@@ -165,7 +195,7 @@ func loadCSV() {
 		if line[0] == ";" {
 			break
 		}
-		typesList = append(typesList, line[0])
+		typesList[numTypes] = line[0]
 		//log.Printf("Loading type #%d: %s\n", numTypes, line[0])
 		numTypes++
 	}
@@ -186,7 +216,7 @@ func loadCSV() {
 		if line[0] == ";" {
 			break
 		}
-		formatsList = append(formatsList, line[0])
+		formatsList[numFormats] = line[0]
 		//log.Printf("Loading format #%d: %s\n", numFormats, line[0])
 		numFormats++
 	}
@@ -208,22 +238,17 @@ func loadCSV() {
 		if line[0] == ";" {
 			break
 		}
-		row := make([]string, 7)
+		row := make([]string, 6)
 		for c := 0; c < 6; c++ {
 			row[c] = line[c]
 		}
-		if numInstrs == 0 {
-			instrsTable[0] = row
-		} else {
-			instrsTable = append(instrsTable, row)
-		}
+		instrsTable[numInstrs] = row
 		numInstrs++
 	}
-
-	instrsView.ResizeColumnsToContentsDefault()
 	instrsModel.EndResetModel()
-	csvFile.Close()
 
+	csvFile.Close()
+	iiAction.SetEnabled(true)
 }
 
 func saveCSV() {
@@ -347,4 +372,69 @@ package main
 	widgets.QMessageBox_Information(window,
 		"MV/Instr", "Go file written",
 		widgets.QMessageBox__Close, widgets.QMessageBox__NoButton)
+}
+
+func insertInstr() {
+	iiDialog := widgets.NewQDialog(window, core.Qt__Widget)
+	iiDialog.SetWindowTitle("MV/Instr - Add new instruction")
+	iiLayout := widgets.NewQGridLayout(iiDialog)
+
+	mnemLab := widgets.NewQLabel(iiDialog, 0)
+	mnemLab.SetText("Mnemonic")
+	iiLayout.AddWidget(mnemLab, 0, 0, core.Qt__AlignVCenter)
+
+	mnemEdit := widgets.NewQLineEdit(iiDialog)
+	iiLayout.AddWidget(mnemEdit, 0, 1, core.Qt__AlignVCenter)
+
+	bitsLab := widgets.NewQLabel(iiDialog, 0)
+	bitsLab.SetText("Bit Pattern")
+	iiLayout.AddWidget(bitsLab, 1, 0, core.Qt__AlignVCenter)
+
+	bitsEdit := widgets.NewQLineEdit(iiDialog)
+	iiLayout.AddWidget(bitsEdit, 1, 1, core.Qt__AlignVCenter)
+
+	maskLab := widgets.NewQLabel(iiDialog, 0)
+	maskLab.SetText("Bit Mask")
+	iiLayout.AddWidget(maskLab, 2, 0, core.Qt__AlignVCenter)
+
+	maskEdit := widgets.NewQLineEdit(iiDialog)
+	iiLayout.AddWidget(maskEdit, 2, 1, core.Qt__AlignVCenter)
+
+	lenLab := widgets.NewQLabel(iiDialog, 0)
+	lenLab.SetText("Instruction Length")
+	iiLayout.AddWidget(lenLab, 3, 0, core.Qt__AlignVCenter)
+
+	lenEdit := widgets.NewQLineEdit(iiDialog)
+	iiLayout.AddWidget(lenEdit, 3, 1, core.Qt__AlignVCenter)
+
+	fmtLab := widgets.NewQLabel(iiDialog, 0)
+	fmtLab.SetText("OpCode Format")
+	iiLayout.AddWidget(fmtLab, 4, 0, core.Qt__AlignVCenter)
+
+	fmtCombo := widgets.NewQComboBox(iiDialog)
+	fmtCombo.AddItems(formatsList[:numFormats])
+	iiLayout.AddWidget(fmtCombo, 4, 1, core.Qt__AlignVCenter)
+
+	typLab := widgets.NewQLabel(iiDialog, 0)
+	typLab.SetText("Instruction Type")
+	iiLayout.AddWidget(typLab, 5, 0, core.Qt__AlignVCenter)
+
+	typCombo := widgets.NewQComboBox(iiDialog)
+	typCombo.AddItems(typesList[:numTypes])
+	iiLayout.AddWidget(typCombo, 5, 1, core.Qt__AlignVCenter)
+
+	buttonBox := widgets.NewQDialogButtonBox(nil)
+	buttonBox.AddButton2("Cancel", widgets.QDialogButtonBox__RejectRole)
+	buttonBox.AddButton2("Insert", widgets.QDialogButtonBox__AcceptRole)
+	buttonBox.ConnectRejected(func() { iiDialog.Reject() })
+	buttonBox.ConnectAccepted(func() { iiDialog.Accept() })
+	iiLayout.AddWidget(buttonBox, 6, 1, core.Qt__AlignVCenter)
+
+	iiDialog.SetLayout(iiLayout)
+	if iiDialog.Exec() != int(widgets.QDialog__Accepted) {
+		return
+	}
+	log.Println("Dialog Accepted")
+	log.Printf("New Mnemonic is: %s\n", mnemEdit.Text())
+
 }
