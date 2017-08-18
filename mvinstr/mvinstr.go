@@ -77,6 +77,9 @@ func populateMenus() {
 
 	editMenu := window.MenuBar().AddMenu2("&Edit")
 
+	chk := editMenu.AddAction("Check &Bitmasks")
+	chk.ConnectTriggered(func(checked bool) { checkBits() })
+
 	iiAction = editMenu.AddAction("Insert &Instruction")
 	iiAction.SetDisabled(true)
 	iiAction.ConnectTriggered(func(checked bool) { insertInstr() })
@@ -459,4 +462,37 @@ func insertInstr() {
 	instrsTable[newIx][5] = typCombo.CurrentText()
 	numInstrs++
 	instrsModel.EndResetModel()
+}
+
+// checkBits tests every instruction to ensure that (at least) all set bits are covered by the
+// associated bit mask
+func checkBits() {
+	errors := 0
+	for i := 0; i < numInstrs; i++ {
+		bitsUint, _ := strconv.ParseUint(instrsTable[i][1], 0, 16)
+		maskUint, _ := strconv.ParseUint(instrsTable[i][2], 0, 16)
+		diff := bitsUint ^ maskUint // XOR
+		and := diff & bitsUint
+		// fmt.Printf("%d %s %s ", instrsTable[i][0], instrsTable[i][1], instrsTable[i][2])
+		// if and == 0 {
+		// 	fmt.Printf("OK\n")
+		// } else {
+		// 	fmt.Println("*** Error ***\n")
+		// }
+		if and != 0 {
+			errors++
+			widgets.QMessageBox_Warning(
+				window,
+				"Error",
+				"Bitmasking error in "+instrsTable[i][0],
+				widgets.QMessageBox__Close, widgets.QMessageBox__NoButton)
+		}
+	}
+	if errors == 0 {
+		widgets.QMessageBox_Information(
+			window,
+			"All OK",
+			"No errors found",
+			widgets.QMessageBox__Close, widgets.QMessageBox__NoButton)
+	}
 }
