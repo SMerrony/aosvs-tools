@@ -1,11 +1,9 @@
-/* aosvs_st_parser.go
-   ==================
+// aosvs_st_parser.go
+// ==================
+//
+// Parse an AOS/VS .ST file and emit info useful for reverse-engineering etc.
+//    S.Merrony 20170609 - First version
 
-   Parse an AOS/VS .ST file and emit info useful for reverse-engineering etc.
-
-   S.Merrony 20170609 - First version
-
-*/
 package main
 
 import (
