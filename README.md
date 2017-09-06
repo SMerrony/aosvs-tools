@@ -12,6 +12,12 @@ It is only intended for use where it is impossible to use either [DasherQ](https
 
 No use to anyone yet.
 
+## SimhTapeTool
+
+simhTapeTool provides a command-line utility for handling SimH-compatible images of AOS/VS tapes.  Images may be tested for structural validity (-scan) and created (-create) using a simple CSV file to specify the contents of the tape.  
+
+Some low-level functions are exposed for use elsewhere.
+
 ## ST Parser
 
 aosvs_st_parser takes an AOS/VS symbol table file (.ST) as its sole argument and emits a text stream of locations and symbol names found in the file.  It might be useful for understanding, documenting or reverse engineering AOS/VS programs where the source code has been lost or is unavailable.
