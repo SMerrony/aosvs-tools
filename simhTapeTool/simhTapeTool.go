@@ -1,4 +1,4 @@
-// simhTapeTool is a utility for manipulating SimH-encoded images of tapes for AOS/VS systems.
+// simhTapeTool is a utility and various functions for manipulating SimH-encoded images of tapes for AOS/VS systems.
 
 package main
 
@@ -27,6 +27,7 @@ var (
 	csvFlag        = flag.Bool("csv", false, "Use/Generate CSV-format data")
 	definitionFlag = flag.String("definition", "", "Use a definition file")
 	scanFlag       = flag.String("scan", "", "Scan a SimH Tape Image file for correctness")
+	vFlag          = flag.Bool("v", false, "Be more verbose")
 )
 
 func main() {
@@ -55,6 +56,7 @@ func createImage() {
 		log.Fatalf("ERROR: Could not create new image file %s", *createFlag)
 	}
 	for {
+		// read a line from the CSV definition file
 		defRec, err := csvReader.Read()
 		if err == io.EOF {
 			break
@@ -73,6 +75,7 @@ func createImage() {
 		}
 		switch thisBlkSize {
 		case 2048, 4096, 8192, 16384:
+			fmt.Printf("\nAdding file: %s with block size: %d ", defRec[0], thisBlkSize)
 			block := make([]byte, thisBlkSize)
 			for {
 				bytesRead, err := thisSrcFile.Read(block)
@@ -80,15 +83,26 @@ func createImage() {
 					log.Fatal(err)
 				}
 				if bytesRead > 0 {
-					WriteMetaData(imgFile, uint32(bytesRead))
-					ok := WriteRecordData(imgFile, block)
+					WriteMetaData(imgFile, uint32(bytesRead)) // block header
+					if *vFlag {
+						fmt.Printf(" Wrote Header value: %d...", uint32(bytesRead))
+					}
+					ok := WriteRecordData(imgFile, block[0:bytesRead]) // block
 					if !ok {
 						log.Fatal("ERROR: Error writing image file")
 					}
-					WriteMetaData(imgFile, uint32(bytesRead))
+					fmt.Printf(".")
+					WriteMetaData(imgFile, uint32(bytesRead)) // block trailer
+					if *vFlag {
+						fmt.Printf(" Wrote Trailer value: %d...", uint32(bytesRead))
+					}
 				}
 				if bytesRead == 0 || err == io.EOF { // End of this file
+					thisSrcFile.Close()
 					WriteMetaData(imgFile, SimhMtrTmk)
+					if *vFlag {
+						fmt.Printf(" EOF: Wrote Tape Mark value: %d...", SimhMtrTmk)
+					}
 					break
 				}
 			} // loop round for next block
@@ -96,8 +110,16 @@ func createImage() {
 			log.Fatalf("ERROR: Unsupported block size %d for input file %s", thisBlkSize, defRec[0])
 		}
 	}
+	// // old EOT was 3 zero headers...
+	// WriteMetaData(imgFile, 0)
+	// WriteMetaData(imgFile, 0)
+
 	WriteMetaData(imgFile, SimhMtrEom)
+	if *vFlag {
+		fmt.Printf(" EOM: Wrote Tape Mark value: %d...", SimhMtrEom)
+	}
 	imgFile.Close()
+	fmt.Printf("\nDone\n")
 }
 
 // ScanImage - attempt to read a whole tape image ensuring headers, record sizes, and trailers match
@@ -119,9 +141,12 @@ func ScanImage(imgFileName string, csv bool) (res string) {
 
 recLoop:
 	for {
-		header, ok = ReadRecordHeaderTrailer(imgFile)
+		header, ok = ReadMetaData(imgFile)
 		if !ok {
 			log.Fatal("Exiting")
+		}
+		if *vFlag {
+			res += fmt.Sprintf("...Read Header(meta) value: %d...", trailer)
 		}
 		switch header {
 		case SimhMtrTmk:
@@ -156,11 +181,16 @@ recLoop:
 			markCount = 0
 			_, ok := ReadRecordData(imgFile, int(header)) // read record and throw away
 			if !ok {
+				fmt.Printf("%s\n", res)
 				log.Fatal("Exiting")
 			}
-			trailer, ok = ReadRecordHeaderTrailer(imgFile)
+			trailer, ok = ReadMetaData(imgFile)
 			if !ok {
+				fmt.Printf("%s\n", res)
 				log.Fatal("Exiting")
+			}
+			if *vFlag {
+				res += fmt.Sprintf("...Read Trailer value: %d...", trailer)
 			}
 			//logging.DebugPrint(logging.DEBUG_LOG,"Debug: got trailer value: %d\n", trailer)
 			if header == trailer {
@@ -173,9 +203,9 @@ recLoop:
 	return res
 }
 
-// ReadRecordHeaderTrailer reads a four byte (one doubleword) header or trailer record
-// from the supplised tape image file
-func ReadRecordHeaderTrailer(imgFile *os.File) (uint32, bool) {
+// ReadMetaData reads a four byte (one doubleword) header, trailer, or other metadata record
+// from the supplied tape image file
+func ReadMetaData(imgFile *os.File) (uint32, bool) {
 	hdrBytes := make([]byte, 4)
 	nb, err := imgFile.Read(hdrBytes)
 	if err != nil {
@@ -218,6 +248,7 @@ func WriteMetaData(imgFile *os.File, hdr uint32) bool {
 	hdrBytes[2] = byte(hdr >> 16)
 	hdrBytes[1] = byte(hdr >> 8)
 	hdrBytes[0] = byte(hdr)
+	fmt.Printf("DEBUG: WriteMetaData got %d, writing bytes: %d %d %d %d\n", hdr, hdrBytes[0], hdrBytes[1], hdrBytes[2], hdrBytes[3])
 	nb, err := imgFile.Write(hdrBytes)
 	if err != nil || nb != 4 {
 		log.Fatalf("ERROR: Could not write simh tape header record due to %s\n", err.Error())

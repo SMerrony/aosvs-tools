@@ -1,3 +1,7 @@
 mvinstr/mvinstr
 st_parser/*.SYMS
 dashert/dashert
+simhTapeTool/*.csv
+simhTapeTool/simhTapeTool
+simhTapeTool/tmp
+
