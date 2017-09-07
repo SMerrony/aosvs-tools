@@ -103,3 +103,84 @@ func WriteRecordData(imgFile *os.File, rec []byte) bool {
 	}
 	return true
 }
+
+// ScanImage - attempt to read a whole tape image ensuring headers, record sizes, and trailers match
+// if csv is true then output is in CSV format
+func ScanImage(imgFileName string, csv bool) (res string) {
+
+	imgFile, err := os.Open(imgFileName)
+	if err != nil {
+		log.Fatalf("ERROR: Could not open tape image file %s for ScanImage function", err.Error())
+	}
+	defer imgFile.Close()
+
+	var (
+		fileSize, markCount, fileCount, recNum int
+		header, trailer                        uint32 // a DG-DoubleWord
+		ok                                     bool
+	)
+	fileCount = -1
+
+recLoop:
+	for {
+		header, ok = ReadMetaData(imgFile)
+		if !ok {
+			log.Fatal("Exiting")
+		}
+		// if *vFlag {
+		// 	res += fmt.Sprintf("...Read Header(meta) value: %d...", trailer)
+		// }
+		switch header {
+		case SimhMtrTmk:
+			if fileSize > 0 {
+				fileCount++
+				if csv {
+					res += fmt.Sprintf("file%d,%d\n", fileCount, fileSize/recNum)
+				} else {
+					res += fmt.Sprintf("\nFile %d : %12d bytes in %6d block(s) avg. block size %d",
+						fileCount, fileSize, recNum, fileSize/recNum)
+				}
+				fileSize = 0
+				recNum = 0
+			}
+			markCount++
+			if markCount == 3 {
+				if csv {
+					res += "EOT,0"
+				} else {
+					res += "\nTriple Mark (old End Of Tape indicator)"
+				}
+				break recLoop
+			}
+		case SimhMtrEom:
+			res += "\nEnd of Medium"
+			break recLoop
+		case SimhMtrGap:
+			res += "\nErase Gap"
+			markCount = 0
+		default:
+			recNum++
+			markCount = 0
+			_, ok := ReadRecordData(imgFile, int(header)) // read record and throw away
+			if !ok {
+				fmt.Printf("%s\n", res)
+				log.Fatal("Exiting")
+			}
+			trailer, ok = ReadMetaData(imgFile)
+			if !ok {
+				fmt.Printf("%s\n", res)
+				log.Fatal("Exiting")
+			}
+			// if *vFlag {
+			// 	res += fmt.Sprintf("...Read Trailer value: %d...", trailer)
+			// }
+			//logging.DebugPrint(logging.DEBUG_LOG,"Debug: got trailer value: %d\n", trailer)
+			if header == trailer {
+				fileSize += int(header)
+			} else {
+				res += "\nNon-matching trailer found."
+			}
+		}
+	}
+	return res
+}
