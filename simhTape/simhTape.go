@@ -104,6 +104,44 @@ func WriteRecordData(imgFile *os.File, rec []byte) bool {
 	return true
 }
 
+// Rewind simulates a tape rewind by seeking to the start of the tape image file
+func Rewind(imgFile *os.File) bool {
+	_, err := imgFile.Seek(0, 0)
+	if err != nil {
+		log.Printf("ERROR: Could not seek to start of SimH Tape Image due to %s\n", err.Error())
+		return false
+	}
+	return true
+}
+
+// SpaceFwd advances the virtual tape by the specified amount (0 means 1 whole file)
+func SpaceFwd(imgFile *os.File, recCnt int) bool {
+	var hdr, trailer uint32
+	done := false
+
+	// special case when recCnt == 0 which means space forward one file...
+	if recCnt == 0 {
+		for !done {
+			hdr, _ = ReadMetaData(imgFile)
+			if hdr == SimhMtrTmk {
+				done = true
+			} else {
+				// read record and throw it away
+				ReadRecordData(imgFile, int(hdr))
+				// read trailer
+				trailer, _ = ReadMetaData(imgFile)
+				if hdr != trailer {
+					log.Fatal("ERROR: simhTape.SpaceFwd found non-matching header/trailer")
+				}
+			}
+		}
+	} else {
+		log.Fatal("ERROR: simhTape.SpaceFwd called with record count != 0 - Not Yet Implemented")
+	}
+
+	return true
+}
+
 // ScanImage - attempt to read a whole tape image ensuring headers, record sizes, and trailers match
 // if csv is true then output is in CSV format
 func ScanImage(imgFileName string, csv bool) (res string) {
