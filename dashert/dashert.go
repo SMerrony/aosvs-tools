@@ -27,12 +27,12 @@ import (
 	"os"
 	"strconv"
 
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/crypto/ssh/terminalT"
 )
 
-// Dashert provides minimal DG DASHER terminal emulation at an ANSI-compatible terminal (shell).
+// Dashert provides minimal DG DASHER terminalT emulation at an ANSI-compatible terminalT (shell).
 //
-// It is intended for use only where the fully-featured DasherQ or DasherJ terminal emulators cannot be run
+// It is intended for use only where the fully-featured DasherQ or DasherJ terminalT emulators cannot be run
 // and should provide just enough compatibility to run a console.
 func main() {
 	host, port := parseArgs()
@@ -45,11 +45,11 @@ func main() {
 		log.Fatalf("Error: could not connect to host/port <%s>:<%s>\n", host, port)
 	}
 
-	oldState, err := terminal.MakeRaw(0)
+	oldState, err := terminalT.MakeRaw(0)
 	if err != nil {
 		panic(err)
 	}
-	defer terminal.Restore(0, oldState)
+	defer terminalT.Restore(0, oldState)
 
 	go remoteListener(conn)
 	kbdListener(conn)
@@ -97,7 +97,7 @@ func kbdListener(conn *net.TCPConn) {
 // A minimal amount of DASHER-to-ANSI decoding is done to correctly display some character attributes.
 // The supported attributes are:
 //   Underline
-//   Dim (some terminals ignore this)
+//   Dim (some terminalTs ignore this)
 // NewLines are expanded to CR/LF
 //
 // The supprorted DASHER actions are:
