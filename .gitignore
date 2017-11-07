@@ -8,3 +8,5 @@ simhTapeTool/tmp
 */debug
 dasherg/dasherg
 .vscode/launch.json
+dasherg/profile.pprof
+dasherg/cputrace.pprof
