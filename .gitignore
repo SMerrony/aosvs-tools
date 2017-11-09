@@ -7,6 +7,6 @@ simhTapeTool/tmp
 
 */debug
 dasherg/dasherg
-.vscode/launch.json
+.vscode/
 dasherg/profile.pprof
 dasherg/cputrace.pprof
