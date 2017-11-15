@@ -3,7 +3,7 @@
 This is a small collection of utility programs I have written in Go related to accessing Data General AOS/VS systems and files.
 
 ## DasherG
-DasherG will be a port of my [DasherQ](https://github.com/SMerrony/DasherQ) terminal emulator written in Go and (currently) using the [Go-GTK](https://github.com/mattn/go-gtk) GUI toolkit.  If all goes well I shall retire DasherJ once this is working.
+DasherG terminal emulator has moved to its own repo  [DasherG](https://github.com/SMerrony/DasherG)
 
 *Work-in-Progress*
 
