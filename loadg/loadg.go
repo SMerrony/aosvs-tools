@@ -88,7 +88,8 @@ func main() {
 	}
 
 	// now go through the dump examining each block type and acting accordingly...
-	for {
+	done := false
+	for !done {
 		recHdr := readHeader(dumpFile)
 		if verbose {
 			fmt.Printf("Found block of type: %d, Length: %d\n", recHdr.recordType, recHdr.recordLength)
@@ -121,6 +122,7 @@ func main() {
 				fmt.Printf(" ACL: %s\n", string(aclBlob))
 			}
 		case linkType:
+			processLink(recHdr, dumpFile)
 		case startBlockType:
 			// nothing to do - it's just a recHdr
 		case dataBlockType:
@@ -129,7 +131,7 @@ func main() {
 			processEndBlock()
 		case endDumpType:
 			fmt.Println("=== End of Dump ===")
-			break
+			done = true
 		default:
 			log.Fatalf("ERROR: Unknown block type (%d) in dump file.  Giving up.", recHdr.recordType)
 		}
@@ -209,6 +211,19 @@ func processEndBlock() {
 	}
 	if verbose {
 		fmt.Println("End Block processed")
+	}
+}
+
+func processLink(recHeader recordHeaderT, dumpFile *os.File) {
+	linkTargetBA := make([]byte, recHeader.recordLength)
+	dumpFile.Read(linkTargetBA)
+	// convert AOS/VS : directory separators to Posix slashes
+	linkTarget := strings.Replace(string(linkTargetBA), ":", "/", -1)
+	if summary {
+		fmt.Printf(" -> Link Target: %s\n", linkTarget)
+	}
+	if extract {
+		// TODO
 	}
 }
 
