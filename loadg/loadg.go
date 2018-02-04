@@ -41,7 +41,7 @@ var (
 
 var (
 	fsbBlob                       []byte
-	accumFileSize, inFile, loadIt bool
+	inFile, loadIt                bool
 	totalFileSize                 int
 	baseDir, fileName, workingDir string
 	writeFile                     *os.File
@@ -196,10 +196,8 @@ func processDataBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 		if n != int(dhb.byteLength) || err != nil {
 			log.Fatalf("ERROR: Could not write out data due to %v", err)
 		}
-		totalFileSize += int(dhb.byteLength)
 	}
 
-	accumFileSize = true
 	totalFileSize += int(dhb.byteLength)
 	inFile = true
 }
@@ -209,11 +207,10 @@ func processEndBlock() {
 		if extract && loadIt {
 			writeFile.Close()
 		}
-		if accumFileSize && summary {
+		if summary {
 			fmt.Printf(" %12d bytes\n", totalFileSize)
 		}
 		totalFileSize = 0
-		accumFileSize = false
 		inFile = false
 	} else {
 		// not in the middle of a file, this must be a directory pop instruction
