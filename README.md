@@ -10,7 +10,10 @@ DasherG terminal emulator has moved to its own repo  [DasherG](https://github.co
 ## DasherT
 DasherT is a very minimal Dasher terminal emulator for use at the command line.  It provides just enough functionality to act as a console for an MV-class system.
 
-It is only intended for use where it is impossible to use either [DasherQ](https://github.com/SMerrony/DasherQ) or [DasherJ](https://github.com/SMerrony/DasherJ).
+It is only intended for emergency use where it is impossible to use either [DasherG](https://github.com/SMerrony/DasherG) or [DasherQ](https://github.com/SMerrony/DasherQ), maybe because you cannot build GUI applications or run their binaries.
+
+## LoadG
+LoadG loads (restores) AOS/VS DUMP_II, and maybe DUMP_III, files on any desktop system supported by Go.  It can be used to rescue data from legacy AOS/VS systems if the dumps are accessible on a modern system.  The current version handles at least versions 15 and 16 of the DUMP format.
 
 ## MV/Instr
 No use to anyone yet.
@@ -25,7 +28,7 @@ simhTape is a Go package that provides some low-level functions for handling Sim
 ## SimhTapeTool
 simhTapeTool provides a command-line utility for handling SimH-compatible images of AOS/VS tapes.  Images may be tested for structural validity (-scan) and created (-create) using a simple CSV file to specify the contents of the tape where each line contains a filename and a block-size. 
 
-Uses the simhTape package above.
+It uses the simhTape package above.
 
 ## ST Parser
 aosvs_st_parser takes an AOS/VS symbol table file (.ST) as its sole argument and emits a text stream of locations and symbol names found in the file.  It might be useful for understanding, documenting or reverse engineering AOS/VS programs where the source code has been lost or is unavailable.
