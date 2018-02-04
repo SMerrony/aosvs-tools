@@ -49,6 +49,7 @@ const (
 const (
 	maxBlockSize       = 32768
 	maxAlignmentOffset = 256
+	diskBlockBytes     = 512
 )
 
 type recordHeaderT struct {

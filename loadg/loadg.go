@@ -22,16 +22,16 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 const versionString = "1.2a"
-
-const baseDir = "./"
 
 // program flags (options)...
 var (
@@ -43,7 +43,8 @@ var (
 	fsbBlob                       []byte
 	accumFileSize, inFile, loadIt bool
 	totalFileSize                 int
-	workingDir                    string
+	baseDir, fileName, workingDir string
+	writeFile                     *os.File
 )
 
 func init() {
@@ -78,6 +79,9 @@ func main() {
 	}
 	defer dumpFile.Close()
 
+	baseDir, _ = os.Getwd()
+	workingDir = baseDir
+
 	// there should always be a SOD record...
 	sod := readSod(dumpFile)
 	if summary {
@@ -104,7 +108,7 @@ func main() {
 			}
 			loadIt = false
 		case nbType:
-			processNameBlock(recHdr, fsbBlob, dumpFile)
+			fileName = processNameBlock(recHdr, fsbBlob, dumpFile)
 		case udaType:
 			// throw away for now
 			udaBlob := make([]byte, recHdr.recordLength)
@@ -122,7 +126,7 @@ func main() {
 				fmt.Printf(" ACL: %s\n", string(aclBlob))
 			}
 		case linkType:
-			processLink(recHdr, dumpFile)
+			processLink(recHdr, fileName, dumpFile)
 		case startBlockType:
 			// nothing to do - it's just a recHdr
 		case dataBlockType:
@@ -171,16 +175,30 @@ func processDataBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 		dumpFile.Read(alignment)
 	}
 
-	if extract {
-		// TODO
-	} else {
-		// just skip the actual data
-		dataBlob := make([]byte, dhb.byteLength)
-		n, err := dumpFile.Read(dataBlob)
-		if n != int(dhb.byteLength) || err != nil {
-			log.Fatalf("ERROR: Could not read data block due to %v", err)
-		}
+	dataBlob := make([]byte, dhb.byteLength)
+	n, err := dumpFile.Read(dataBlob)
+	if n != int(dhb.byteLength) || err != nil {
+		log.Fatalf("ERROR: Could not read data block due to %v", err)
 	}
+
+	if extract && writeFile != nil {
+		// pad out if block address is beyond end of last block
+		if int(dhb.byteAddress) > totalFileSize+1 {
+			paddingSize := int(dhb.byteAddress) - totalFileSize
+			paddingBlocks := paddingSize / diskBlockBytes
+			paddingBlock := make([]byte, diskBlockBytes)
+			for p := 0; p < paddingBlocks; p++ {
+				writeFile.Write(paddingBlock)
+				totalFileSize += diskBlockBytes
+			}
+		}
+		n, err := writeFile.Write(dataBlob)
+		if n != int(dhb.byteLength) || err != nil {
+			log.Fatalf("ERROR: Could not write out data due to %v", err)
+		}
+		totalFileSize += int(dhb.byteLength)
+	}
+
 	accumFileSize = true
 	totalFileSize += int(dhb.byteLength)
 	inFile = true
@@ -189,7 +207,7 @@ func processDataBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 func processEndBlock() {
 	if inFile {
 		if extract && loadIt {
-			// TODO
+			writeFile.Close()
 		}
 		if accumFileSize && summary {
 			fmt.Printf(" %12d bytes\n", totalFileSize)
@@ -199,11 +217,14 @@ func processEndBlock() {
 		inFile = false
 	} else {
 		// not in the middle of a file, this must be a directory pop instruction
-		if len(workingDir) > 0 {
-			lastSlashPos := strings.LastIndex(workingDir, "/")
-			if lastSlashPos != -1 {
-				workingDir = workingDir[0:lastSlashPos]
-			}
+		// if len(workingDir) > 0 {
+		// 	lastSlashPos := strings.LastIndex(workingDir, "/")
+		// 	if lastSlashPos != -1 {
+		// 		workingDir = workingDir[0:lastSlashPos]
+		// 	}
+		// }
+		if workingDir != baseDir { // don't go up from start dir
+			workingDir = filepath.Dir(workingDir)
 		}
 		if verbose {
 			fmt.Printf("Popped dir - new dir is: %s\n", workingDir)
@@ -214,20 +235,35 @@ func processEndBlock() {
 	}
 }
 
-func processLink(recHeader recordHeaderT, dumpFile *os.File) {
+func processLink(recHeader recordHeaderT, linkName string, dumpFile *os.File) {
 	linkTargetBA := make([]byte, recHeader.recordLength)
 	dumpFile.Read(linkTargetBA)
+	linkTargetBA = bytes.Trim(linkTargetBA, "\x00")
 	// convert AOS/VS : directory separators to Posix slashes
-	linkTarget := strings.Replace(string(linkTargetBA), ":", "/", -1)
+	linkTarget := strings.ToUpper(strings.Replace(string(linkTargetBA), ":", "/", -1))
 	if summary {
 		fmt.Printf(" -> Link Target: %s\n", linkTarget)
 	}
 	if extract {
-		// TODO
+		var oldName string
+		if len(workingDir) == 0 {
+			oldName = linkTarget
+		} else {
+			oldName = filepath.Join(workingDir, linkTarget)
+			linkName = filepath.Join(workingDir, linkName)
+		}
+		err := os.Symlink(oldName, linkName)
+		if err != nil {
+			log.Printf("ERROR: Could not create symbolic link, existing file %s, link name: %s, due to %v\n",
+				oldName, linkName, err)
+			if !ignoreErrors {
+				log.Fatalln("Giving up.")
+			}
+		}
 	}
 }
 
-func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File) {
+func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File) string {
 	var (
 		fileType string
 	)
@@ -236,20 +272,17 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 	if n != recHeader.recordLength || err != nil {
 		log.Fatalf("ERROR: Could not read file name in Name Block in file <%s> due to %v", dumpFile.Name(), err)
 	}
-	fileName := strings.ToUpper(string(nameBytes))
+	fileName := strings.ToUpper(string(bytes.Trim(nameBytes, "\x00")))
 	if summary && verbose {
 		fmt.Println()
 	}
 	switch fsbBlob[1] {
 	case flnk:
-		fileType = "Link"
+		fileType = "=>Link=>"
 		loadIt = false
 	case fdir:
-		fileType = "Directory"
-		if len(workingDir) > 0 {
-			workingDir += "/"
-		}
-		workingDir += fileName
+		fileType = "<Directory>"
+		workingDir = filepath.Join(workingDir, fileName)
 		if extract {
 			err := os.MkdirAll(workingDir, os.ModePerm)
 			if err != nil {
@@ -280,7 +313,7 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 		if len(workingDir) == 0 {
 			displayPath = fileName
 		} else {
-			displayPath = workingDir + "/" + fileName
+			displayPath = filepath.Join(workingDir, fileName)
 		}
 		fmt.Printf("%-12s: %-48s", fileType, displayPath)
 		if verbose || fsbBlob[1] == fdir {
@@ -291,8 +324,24 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 	}
 
 	if extract && loadIt {
-		// TODO
+		var writePath string
+		if len(workingDir) == 0 {
+			writePath = fileName
+		} else {
+			writePath = filepath.Join(workingDir, fileName)
+		}
+		if verbose {
+			fmt.Printf(" Creating file: '%s'\n", writePath)
+		}
+		writeFile, err = os.Create(writePath)
+		if err != nil {
+			log.Printf("ERROR: Could not create file %s due to %v", writePath, err)
+			if !ignoreErrors {
+				log.Fatalln("Giving up.")
+			}
+		}
 	}
+	return fileName
 }
 
 func readAWord(dumpFile *os.File) WordT {
