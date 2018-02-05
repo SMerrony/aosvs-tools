@@ -24,9 +24,10 @@ simhTape is a Go package that provides some low-level functions for handling Sim
  * ReadRecordData and WriteRecordData for handling data blocks (without their associated headers and trailers)
  * Rewind and SpaceFwd for positioning the virtual tape image
  * ScanImage for examining/verifying a tape image file
+ * DumpFiles to dump each file found on the tape image as a numbered blob
 
 ## SimhTapeTool
-simhTapeTool provides a command-line utility for handling SimH-compatible images of AOS/VS tapes.  Images may be tested for structural validity (-scan) and created (-create) using a simple CSV file to specify the contents of the tape where each line contains a filename and a block-size. 
+simhTapeTool provides a command-line utility for handling SimH-compatible images of AOS/VS tapes.  Images may be tested for structural validity (-scan) and created (-create) using a simple CSV file to specify the contents of the tape where each line contains a filename and a block-size.  Using the -dump option you can extract files from the tape image into numbered blobs in the working directory.
 
 It uses the simhTape package above.
 
