@@ -31,7 +31,7 @@ import (
 	"strings"
 )
 
-const versionString = "1.2a"
+const versionString = "1.3"
 
 // program flags (options)...
 var (
@@ -69,9 +69,11 @@ func init() {
 }
 
 func main() {
-	if version {
+	if version || verbose {
 		fmt.Printf("loadg version %s\n", versionString)
-		return
+		if !verbose {
+			return
+		}
 	}
 	dumpFile, err := os.Open(dump)
 	if err != nil {
@@ -79,12 +81,14 @@ func main() {
 	}
 	defer dumpFile.Close()
 
+	// dump images can legally contain 'too many' directory pops, so we
+	// store the starting directory and never traverse above it...
 	baseDir, _ = os.Getwd()
 	workingDir = baseDir
 
 	// there should always be a SOD record...
 	sod := readSod(dumpFile)
-	if summary {
+	if summary || verbose {
 		fmt.Printf("Summary of dump file : %s\n", dumpFile.Name())
 		fmt.Printf("AOS/VS dump version  : %d\n", sod.dumpFormatRevision)
 		fmt.Printf("Dump date (y-m-d)    : %d-%d-%d\n", sod.dumpTimeYear, sod.dumpTimeMonth, sod.dumpTimeDay)
@@ -144,9 +148,7 @@ func main() {
 
 func processDataBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File) {
 
-	var (
-		dhb dataHeaderT
-	)
+	var dhb dataHeaderT
 
 	// first get the address and length
 	fourBytes := make([]byte, 4)
@@ -162,7 +164,7 @@ func processDataBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 	dumpFile.Read(twoBytes)
 	dhb.alignmentCount = WordT(twoBytes[0])<<8 + WordT(twoBytes[1])
 
-	if summary && verbose {
+	if verbose {
 		fmt.Printf(" Data block: %d (bytes)\n", dhb.byteLength)
 	}
 
@@ -182,12 +184,17 @@ func processDataBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 	}
 
 	if extract && writeFile != nil {
-		// pad out if block address is beyond end of last block
+		// large areas of NULLs may be skipped over by DUMP_II/III
+		// this is achieved by simply advancing the block address so
+		// we must pad out if block address is beyond end of last block
 		if int(dhb.byteAddress) > totalFileSize+1 {
 			paddingSize := int(dhb.byteAddress) - totalFileSize
 			paddingBlocks := paddingSize / diskBlockBytes
 			paddingBlock := make([]byte, diskBlockBytes)
 			for p := 0; p < paddingBlocks; p++ {
+				if verbose {
+					fmt.Println("  Padding with one block")
+				}
 				writeFile.Write(paddingBlock)
 				totalFileSize += diskBlockBytes
 			}
@@ -213,18 +220,11 @@ func processEndBlock() {
 		totalFileSize = 0
 		inFile = false
 	} else {
-		// not in the middle of a file, this must be a directory pop instruction
-		// if len(workingDir) > 0 {
-		// 	lastSlashPos := strings.LastIndex(workingDir, "/")
-		// 	if lastSlashPos != -1 {
-		// 		workingDir = workingDir[0:lastSlashPos]
-		// 	}
-		// }
 		if workingDir != baseDir { // don't go up from start dir
 			workingDir = filepath.Dir(workingDir)
 		}
 		if verbose {
-			fmt.Printf("Popped dir - new dir is: %s\n", workingDir)
+			fmt.Printf(" Popped dir - new dir is: %s\n", workingDir)
 		}
 	}
 	if verbose {
@@ -236,9 +236,9 @@ func processLink(recHeader recordHeaderT, linkName string, dumpFile *os.File) {
 	linkTargetBA := make([]byte, recHeader.recordLength)
 	dumpFile.Read(linkTargetBA)
 	linkTargetBA = bytes.Trim(linkTargetBA, "\x00")
-	// convert AOS/VS : directory separators to Posix slashes
-	linkTarget := strings.ToUpper(strings.Replace(string(linkTargetBA), ":", "/", -1))
-	if summary {
+	// convert AOS/VS : directory separators to platform-specific separators ("\", or "/")
+	linkTarget := strings.ToUpper(strings.Replace(string(linkTargetBA), ":", string(os.PathSeparator), -1))
+	if summary || verbose {
 		fmt.Printf(" -> Link Target: %s\n", linkTarget)
 	}
 	if extract {
