@@ -222,3 +222,80 @@ recLoop:
 	}
 	return res
 }
+
+// DumpFiles - attempt to read a whole tape image and dump its contents
+// to appropriately named files in the current directory
+func DumpFiles(imgFileName string) {
+
+	imgFile, err := os.Open(imgFileName)
+	if err != nil {
+		log.Fatalf("ERROR: Could not open tape image file %s for DumpFiles function", err.Error())
+	}
+	defer imgFile.Close()
+
+	var (
+		fileSize, markCount, fileCount, recNum int
+		header, trailer                        uint32 // a DG-DoubleWord
+		fileName                               string
+		writeFile                              *os.File
+		ok                                     bool
+	)
+	fileCount = 0
+	fileName = fmt.Sprintf("file%d", fileCount)
+	writeFile, err = os.Create(fileName)
+	if err != nil {
+		log.Fatalf("ERROR: Could not create file %s due to %v", fileName, err)
+	}
+recLoop:
+	for {
+		header, ok = ReadMetaData(imgFile)
+		if !ok {
+			log.Fatal("Exiting")
+		}
+
+		switch header {
+		case SimhMtrTmk:
+			if fileSize > 0 {
+				writeFile.Close()
+				fileCount++
+				fileName = fmt.Sprintf("file%d", fileCount)
+				writeFile, err = os.Create(fileName)
+				if err != nil {
+					log.Fatalf("ERROR: Could not create file %s due to %v", fileName, err)
+				}
+				fileSize = 0
+				recNum = 0
+			}
+			markCount++
+			if markCount == 3 {
+				break recLoop
+			}
+		case SimhMtrEom:
+			if fileSize > 0 {
+				writeFile.Close()
+			}
+			break recLoop
+		case SimhMtrGap:
+			markCount = 0
+		default:
+			recNum++
+			markCount = 0
+			blob, ok := ReadRecordData(imgFile, int(header))
+			if !ok {
+				log.Fatal("Exiting")
+			}
+			trailer, ok = ReadMetaData(imgFile)
+			if !ok {
+				log.Fatal("Exiting")
+			}
+			if header == trailer {
+				writeFile.Write(blob)
+				fileSize += int(header)
+			}
+		}
+	}
+	writeFile.Close()
+	if fileSize == 0 {
+		os.Remove(fileName)
+	}
+}

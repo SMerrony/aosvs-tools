@@ -18,6 +18,7 @@ var (
 	createFlag     = flag.String("create", "", "Create a new SimH Tape Image file")
 	csvFlag        = flag.Bool("csv", false, "Use/Generate CSV-format data")
 	definitionFlag = flag.String("definition", "", "Use a definition file")
+	dumpFlag       = flag.String("dump", "", "Dump all files in image as blobs in current directory")
 	scanFlag       = flag.String("scan", "", "Scan a SimH Tape Image file for correctness")
 	vFlag          = flag.Bool("v", false, "Be more verbose")
 )
@@ -33,7 +34,12 @@ func main() {
 			log.Fatal("ERROR: Must specify --csv and provide a --definition file to create new image")
 		}
 		createImage()
+	case *dumpFlag != "":
+		fmt.Println("Dumping files...")
+		simhTape.DumpFiles(*dumpFlag)
+		fmt.Println("...finished.")
 	}
+
 }
 
 func createImage() {
