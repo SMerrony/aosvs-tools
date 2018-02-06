@@ -28,6 +28,7 @@ func main() {
 
 	switch {
 	case *scanFlag != "":
+		fmt.Printf("Scanning tape file : %s", *scanFlag)
 		fmt.Printf("%s\n", simhTape.ScanImage(*scanFlag, *csvFlag))
 	case *createFlag != "":
 		if *csvFlag == false || *definitionFlag == "" {
