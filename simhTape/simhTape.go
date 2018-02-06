@@ -23,6 +23,7 @@ package simhTape
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 )
@@ -43,6 +44,9 @@ func ReadMetaData(imgFile *os.File) (uint32, bool) {
 	hdrBytes := make([]byte, 4)
 	nb, err := imgFile.Read(hdrBytes)
 	if err != nil {
+		if err == io.EOF {
+			return 0, true
+		}
 		log.Printf("ERROR: Could not read simH Tape Image record header: due to: %s\n", err.Error())
 		return 0, false
 	}
