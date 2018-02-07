@@ -18,18 +18,5 @@ LoadG loads (restores) AOS/VS DUMP_II, and maybe DUMP_III, files on any desktop 
 ## MV/Instr
 No use to anyone yet.
 
-## SimhTape
-simhTape is a Go package that provides some low-level functions for handling SimH-standard tape file images.  Functions available include...
- * ReadMetaData and WriteMetaData for handling headers, trailers, and inter-file gaps
- * ReadRecordData and WriteRecordData for handling data blocks (without their associated headers and trailers)
- * Rewind and SpaceFwd for positioning the virtual tape image
- * ScanImage for examining/verifying a tape image file
- * DumpFiles to dump each file found on the tape image as a numbered blob
-
-## SimhTapeTool
-simhTapeTool provides a command-line utility for handling SimH-compatible images of AOS/VS tapes.  Images may be tested for structural validity (-scan) and created (-create) using a simple CSV file to specify the contents of the tape where each line contains a filename and a block-size.  Using the -dump option you can extract files from the tape image into numbered blobs in the working directory.
-
-It uses the simhTape package above.
-
 ## ST Parser
 aosvs_st_parser takes an AOS/VS symbol table file (.ST) as its sole argument and emits a text stream of locations and symbol names found in the file.  It might be useful for understanding, documenting or reverse engineering AOS/VS programs where the source code has been lost or is unavailable.
