@@ -162,7 +162,7 @@ func exportGo() bool {
 
 	fmt.Fprintf(goWriter, `// InstructionDefinitions.go
 
-// Copyright (C) 2017  Steve Merrony
+// Copyright (C) 2018  Steve Merrony
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -193,16 +193,25 @@ package main
 	for t := 1; t < numTypes; t++ {
 		fmt.Fprintf(goWriter, "\t%s\n", typesList[t])
 	}
+
 	fmt.Fprintf(goWriter, ")\n\n// Instruction Formats\nconst (\n")
 	fmt.Fprintf(goWriter, "\t%s = iota\n", formatsList[0])
 	for f := 1; f < numFormats; f++ {
 		fmt.Fprintf(goWriter, "\t%s\n", formatsList[f])
 	}
+
+	fmt.Fprintf(goWriter, ")\n\n// Instruction Mnemonic Consts\nconst (\n")
+	fmt.Fprintf(goWriter, "\tinstr%s = iota\n", instrsTable[0][0])
+	for i := 1; i < numInstrs; i++ {
+		fmt.Fprintf(goWriter, "\tinstr%s\n", instrsTable[i][0])
+	}
+
 	fmt.Fprintf(goWriter, ")\n\n// InstructionsInit initialises the instruction characterstics for each instruction(\n")
 	fmt.Fprintf(goWriter, "func instructionsInit() {\n")
 
 	for i := 0; i < numInstrs; i++ {
-		fmt.Fprintf(goWriter, "\tinstructionSet[\"%s\"] = instrChars{%s, %s, %s, %s, %s}\n",
+		fmt.Fprintf(goWriter, "\tinstructionSet[instr%s] = instrChars{\"%s\", %s, %s, %s, %s, %s}\n",
+			instrsTable[i][0],
 			instrsTable[i][0],
 			instrsTable[i][1],
 			instrsTable[i][2],
