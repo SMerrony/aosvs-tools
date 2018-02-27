@@ -15,8 +15,5 @@ It is only intended for emergency use where it is impossible to use either [Dash
 ## LoadG
 LoadG loads (restores) AOS/VS DUMP_II, and maybe DUMP_III, files on any desktop system supported by Go.  It can be used to rescue data from legacy AOS/VS systems if the dumps are accessible on a modern system.  The current version handles at least versions 15 and 16 of the DUMP format.
 
-## MV/Instr
-No use to anyone yet.
-
 ## ST Parser
 aosvs_st_parser takes an AOS/VS symbol table file (.ST) as its sole argument and emits a text stream of locations and symbol names found in the file.  It might be useful for understanding, documenting or reverse engineering AOS/VS programs where the source code has been lost or is unavailable.
