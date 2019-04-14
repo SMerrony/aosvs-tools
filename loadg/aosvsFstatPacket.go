@@ -1,9 +1,9 @@
 // aosvsFstatPacket.go - AOS/VS FSTAT system call packet structure
 
-// Based on info from System Call Dictionary 093-000241 p.2-162
+// Based on info from System Call Dictionary 093-000241 p.2-162 and PARU.32.SR
 // This file is part of loadg.
 
-// Copyright 2018 Steve Merrony
+// Copyright 2018, 2019 Steve Merrony
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,10 +29,17 @@ const (
 	slthB = 50
 
 	flnk = 0
-	fdir = 12
-	fdmp = 64 // guessed symbol
+	fdsf = 1
+	fmtf = 2
+	fgfn = 3
+	fdir = 10
+	fldu = 11
+	fcpd = 12
+	fudf = 64
+	fupd = 66
 	fstf = 67
 	ftxt = 68
+	flog = 69
 	fprv = 74
 	fprg = 87
 )

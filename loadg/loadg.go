@@ -273,11 +273,9 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 	if summary && verbose {
 		fmt.Println()
 	}
+	loadIt = true
 	switch fsbBlob[1] {
-	case flnk:
-		fileType = "=>Link=>"
-		loadIt = false
-	case fdir:
+	case fcpd, fdir, fldu:
 		fileType = "<Directory>"
 		workingDir = filepath.Join(workingDir, fileName)
 		if extract {
@@ -290,19 +288,28 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 			}
 		}
 		loadIt = false
-	case fstf:
-		fileType = "Symbol Table"
-		loadIt = true
-	case ftxt:
-		fileType = "Text file"
-		loadIt = true
+	case fdsf:
+		fileType = "System Data File"
+	case fgfn:
+		fileType = "Generic File"
+	case flnk:
+		fileType = "=>Link=>"
+		loadIt = false
+	case flog:
+		fileType = "System Log"
+	case fmtf:
+		fileType = "Mag Tape File"
 	case fprg, fprv:
 		fileType = "Program File"
-		loadIt = true
+	case fstf:
+		fileType = "Symbol Table"
+	case ftxt:
+		fileType = "Text file"
+	case fudf:
+		fileType = "User Data File"
 	default: // we don't explicitly recognise the type
 		// TODO: get definitive list from paru.32.sr
-		fileType = "File"
-		loadIt = true
+		fileType = "Unknown File"
 	}
 
 	if summary {
@@ -312,8 +319,8 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 		} else {
 			displayPath = filepath.Join(workingDir, fileName)
 		}
-		fmt.Printf("%-12s: %-48s", fileType, displayPath)
-		if verbose || fsbBlob[1] == fdir {
+		fmt.Printf("%-18s: %-48s", fileType, displayPath)
+		if verbose || fsbBlob[1] == fcpd || fsbBlob[1] == fdir || fsbBlob[1] == fldu {
 			fmt.Println()
 		} else {
 			fmt.Printf("\t")

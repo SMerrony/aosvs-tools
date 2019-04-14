@@ -8,3 +8,6 @@ dasherg/dasherg
 dasherg/*.pprof
 
 loadg/loadg
+loadg/loadg.exe
+loadg/log.txt
+loadg/TestData/
