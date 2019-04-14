@@ -1,6 +1,6 @@
 // loadg.go
 
-// Copyright (C) 2018  Steve Merrony
+// Copyright (C) 2018,2019  Steve Merrony
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@ import (
 	"strings"
 )
 
-const versionString = "1.3"
+const semVer = "v1.4.0"
 
 // program flags (options)...
 var (
@@ -70,7 +70,7 @@ func init() {
 
 func main() {
 	if version || verbose {
-		fmt.Printf("loadg version %s\n", versionString)
+		fmt.Printf("loadg version %s\n", semVer)
 		if !verbose {
 			return
 		}
@@ -104,28 +104,15 @@ func main() {
 		}
 		switch recHdr.recordType {
 		case fsbType:
-			//dumpFile.Seek(int64(recHdr.recordLength), 1)
-			fsbBlob = make([]byte, recHdr.recordLength)
-			n, err := dumpFile.Read(fsbBlob)
-			if n != recHdr.recordLength || err != nil {
-				log.Fatalf("ERROR: Could not read FSB due to %v", err)
-			}
+			fsbBlob = readBlob(recHdr.recordLength, dumpFile, "FSB")
 			loadIt = false
 		case nbType:
 			fileName = processNameBlock(recHdr, fsbBlob, dumpFile)
 		case udaType:
 			// throw away for now
-			udaBlob := make([]byte, recHdr.recordLength)
-			n, err := dumpFile.Read(udaBlob)
-			if n != recHdr.recordLength || err != nil {
-				log.Fatalf("ERROR: Could not read UDA due to %v", err)
-			}
+			_ = readBlob(recHdr.recordLength, dumpFile, "UDA")
 		case aclType:
-			aclBlob := make([]byte, recHdr.recordLength)
-			n, err := dumpFile.Read(aclBlob)
-			if n != recHdr.recordLength || err != nil {
-				log.Fatalf("ERROR: Could not read ACL due to %v", err)
-			}
+			aclBlob := readBlob(recHdr.recordLength, dumpFile, "ACL")
 			if verbose {
 				fmt.Printf(" ACL: %s\n", string(aclBlob))
 			}
@@ -151,19 +138,15 @@ func processDataBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 	var dhb dataHeaderT
 
 	// first get the address and length
-	fourBytes := make([]byte, 4)
-	dumpFile.Read(fourBytes)
+	fourBytes := readBlob(4, dumpFile, "byte address")
 	dhb.byteAddress = DwordT(fourBytes[0])<<24 + DwordT(fourBytes[1])<<16 + DwordT(fourBytes[2])<<8 + DwordT(fourBytes[3])
-	dumpFile.Read(fourBytes)
+	fourBytes = readBlob(4, dumpFile, "byte length")
 	dhb.byteLength = DwordT(fourBytes[0])<<24 + DwordT(fourBytes[1])<<16 + DwordT(fourBytes[2])<<8 + DwordT(fourBytes[3])
 	if dhb.byteLength > maxBlockSize {
 		log.Fatalf("ERROR: Maximum block size exceeded ( %d vs. limit of %d).", dhb.byteLength, maxBlockSize)
 	}
-
-	twoBytes := make([]byte, 2)
-	dumpFile.Read(twoBytes)
+	twoBytes := readBlob(2, dumpFile, "alignment count")
 	dhb.alignmentCount = WordT(twoBytes[0])<<8 + WordT(twoBytes[1])
-
 	if verbose {
 		fmt.Printf(" Data block: %d (bytes)\n", dhb.byteLength)
 	}
@@ -177,11 +160,7 @@ func processDataBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 		dumpFile.Read(alignment)
 	}
 
-	dataBlob := make([]byte, dhb.byteLength)
-	n, err := dumpFile.Read(dataBlob)
-	if n != int(dhb.byteLength) || err != nil {
-		log.Fatalf("ERROR: Could not read data block due to %v", err)
-	}
+	dataBlob := readBlob(int(dhb.byteLength), dumpFile, "data block")
 
 	if extract && writeFile != nil {
 		// large areas of NULLs may be skipped over by DUMP_II/III
@@ -233,8 +212,7 @@ func processEndBlock() {
 }
 
 func processLink(recHeader recordHeaderT, linkName string, dumpFile *os.File) {
-	linkTargetBA := make([]byte, recHeader.recordLength)
-	dumpFile.Read(linkTargetBA)
+	linkTargetBA := readBlob(recHeader.recordLength, dumpFile, "link target")
 	linkTargetBA = bytes.Trim(linkTargetBA, "\x00")
 	// convert AOS/VS : directory separators to platform-specific separators ("\", or "/")
 	linkTarget := strings.ToUpper(strings.Replace(string(linkTargetBA), ":", string(os.PathSeparator), -1))
@@ -264,11 +242,7 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 	var (
 		fileType string
 	)
-	nameBytes := make([]byte, recHeader.recordLength)
-	n, err := dumpFile.Read(nameBytes)
-	if n != recHeader.recordLength || err != nil {
-		log.Fatalf("ERROR: Could not read file name in Name Block in file <%s> due to %v", dumpFile.Name(), err)
-	}
+	nameBytes := readBlob(recHeader.recordLength, dumpFile, "file name")
 	fileName := strings.ToUpper(string(bytes.Trim(nameBytes, "\x00")))
 	if summary && verbose {
 		fmt.Println()
@@ -337,6 +311,7 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 		if verbose {
 			fmt.Printf(" Creating file: '%s'\n", writePath)
 		}
+		var err error
 		writeFile, err = os.Create(writePath)
 		if err != nil {
 			log.Printf("ERROR: Could not create file %s due to %v", writePath, err)
@@ -348,13 +323,18 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 	return fileName
 }
 
+func readBlob(byteLen int, dumpFile *os.File, desc string) []byte {
+	ba := make([]byte, byteLen)
+	n, err := dumpFile.Read(ba)
+	if n != byteLen || err != nil {
+		log.Fatalf("ERROR: Could not read %s record due to %v", desc, err)
+	}
+	return ba
+}
+
 func readAWord(dumpFile *os.File) WordT {
 	var w WordT
-	twoBytes := make([]byte, 2)
-	n, err := dumpFile.Read(twoBytes)
-	if n != 2 || err != nil {
-		log.Fatalf("ERROR: Could not read Word in file <%s> due to %v", dumpFile.Name(), err)
-	}
+	twoBytes := readBlob(2, dumpFile, "DG Word")
 	w = WordT(twoBytes[0])<<8 | WordT(twoBytes[1])
 	return w
 }
@@ -363,11 +343,7 @@ func readHeader(dumpFile *os.File) recordHeaderT {
 	var (
 		hdr recordHeaderT
 	)
-	twoBytes := make([]byte, 2)
-	n, err := dumpFile.Read(twoBytes)
-	if n != 2 || err != nil {
-		log.Fatalf("ERROR: Could not read header in file <%s> due to %v", dumpFile.Name(), err)
-	}
+	twoBytes := readBlob(2, dumpFile, "Header")
 	hdr.recordType = int(twoBytes[0]) >> 2 // 6-bit
 	hdr.recordLength = int(twoBytes[0]&0x03)<<8 + int(twoBytes[1])
 	return hdr
