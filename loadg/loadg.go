@@ -134,7 +134,6 @@ func main() {
 }
 
 func processDataBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File) {
-
 	var dhb dataHeaderT
 
 	// first get the address and length
@@ -183,7 +182,6 @@ func processDataBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 			log.Fatalf("ERROR: Could not write out data due to %v", err)
 		}
 	}
-
 	totalFileSize += int(dhb.byteLength)
 	inFile = true
 }
@@ -239,17 +237,15 @@ func processLink(recHeader recordHeaderT, linkName string, dumpFile *os.File) {
 }
 
 func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File) string {
-	var (
-		fileType string
-	)
+	var fileType string
 	nameBytes := readBlob(recHeader.recordLength, dumpFile, "file name")
 	fileName := strings.ToUpper(string(bytes.Trim(nameBytes, "\x00")))
 	if summary && verbose {
 		fmt.Println()
 	}
 	loadIt = true
-	fets := KnownFstatEntryTypes()
-	thisEntryType, known := fets[fsbBlob[1]]
+	knownEntryTypes := KnownFstatEntryTypes()
+	thisEntryType, known := knownEntryTypes[fsbBlob[1]]
 	if known {
 		fileType = thisEntryType.Desc
 		switch thisEntryType.DgMnemonic {
@@ -329,9 +325,7 @@ func readAWord(dumpFile *os.File) WordT {
 }
 
 func readHeader(dumpFile *os.File) recordHeaderT {
-	var (
-		hdr recordHeaderT
-	)
+	var hdr recordHeaderT
 	twoBytes := readBlob(2, dumpFile, "Header")
 	hdr.recordType = int(twoBytes[0]) >> 2 // 6-bit
 	hdr.recordLength = int(twoBytes[0]&0x03)<<8 + int(twoBytes[1])

@@ -126,8 +126,7 @@ type FstatEntry struct {
 type FstatEntryTypes map[byte]FstatEntry
 
 func KnownFstatEntryTypes() FstatEntryTypes {
-	//fet := make(FstatEntryTypes)
-	fet := FstatEntryTypes{
+	return FstatEntryTypes{
 		0:  {"FLNK", "=>Link=>"},
 		1:  {"FDSF", "System Data File"},
 		2:  {"FMTF", "Mag Tape File"},
@@ -143,5 +142,4 @@ func KnownFstatEntryTypes() FstatEntryTypes {
 		74: {"FPRV", "Program File"},
 		87: {"FPRG", "Program File"},
 	}
-	return fet
 }
