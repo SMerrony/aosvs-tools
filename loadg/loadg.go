@@ -248,41 +248,27 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 		fmt.Println()
 	}
 	loadIt = true
-	switch fsbBlob[1] {
-	case fcpd, fdir, fldu:
-		fileType = "<Directory>"
-		workingDir = filepath.Join(workingDir, fileName)
-		if extract {
-			err := os.MkdirAll(workingDir, os.ModePerm)
-			if err != nil {
-				log.Printf("ERROR: Could not create directory <%s> due to %v", workingDir, err)
-				if !ignoreErrors {
-					log.Fatalln("Giving up.")
+	fets := KnownFstatEntryTypes()
+	thisEntryType, known := fets[fsbBlob[1]]
+	if known {
+		fileType = thisEntryType.Desc
+		switch thisEntryType.DgMnemonic {
+		case "FDIR", "FLDU", "FCPD":
+			workingDir = filepath.Join(workingDir, fileName)
+			if extract {
+				err := os.MkdirAll(workingDir, os.ModePerm)
+				if err != nil {
+					log.Printf("ERROR: Could not create directory <%s> due to %v", workingDir, err)
+					if !ignoreErrors {
+						log.Fatalln("Giving up.")
+					}
 				}
 			}
+			loadIt = false
+		case "FLNK":
+			loadIt = false
 		}
-		loadIt = false
-	case fdsf:
-		fileType = "System Data File"
-	case fgfn:
-		fileType = "Generic File"
-	case flnk:
-		fileType = "=>Link=>"
-		loadIt = false
-	case flog:
-		fileType = "System Log"
-	case fmtf:
-		fileType = "Mag Tape File"
-	case fprg, fprv:
-		fileType = "Program File"
-	case fstf:
-		fileType = "Symbol Table"
-	case ftxt:
-		fileType = "Text file"
-	case fudf:
-		fileType = "User Data File"
-	default: // we don't explicitly recognise the type
-		// TODO: get definitive list from paru.32.sr
+	} else {
 		fileType = "Unknown File"
 	}
 
@@ -294,8 +280,11 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 			displayPath = filepath.Join(workingDir, fileName)
 		}
 		fmt.Printf("%-18s: %-48s", fileType, displayPath)
-		if verbose || fsbBlob[1] == fcpd || fsbBlob[1] == fdir || fsbBlob[1] == fldu {
-			fmt.Println()
+		if verbose { //|| fsbBlob[1] == fcpd || fsbBlob[1] == fdir || fsbBlob[1] == fldu {
+			switch thisEntryType.DgMnemonic {
+			case "FDIR", "FLDU", "FCPD":
+				fmt.Println()
+			}
 		} else {
 			fmt.Printf("\t")
 		}

@@ -65,40 +65,40 @@ type sodT struct {
 	dumpTimeDay, dumpTimeMonth, dumpTimeYear  WordT
 }
 
-// FSB
-type fsbT struct {
-	fsbGeader recordHeaderT
-	fstatPkt  fstatPktT
-}
+// // FSB
+// type fsbT struct {
+// 	fsbGeader recordHeaderT
+// 	fstatPkt  fstatPktT
+// }
 
-// Name Block
-type nbT struct {
-	nbHeader recordHeaderT
-	fileName []byte
-}
+// // Name Block
+// type nbT struct {
+// 	nbHeader recordHeaderT
+// 	fileName []byte
+// }
 
-// User Data Area Block
-type udaT struct {
-	udaHeader recordHeaderT
-	uda       [256]byte
-}
+// // User Data Area Block
+// type udaT struct {
+// 	udaHeader recordHeaderT
+// 	uda       [256]byte
+// }
 
-// Access Control List block
-type aclT struct {
-	aclHeader recordHeaderT
-	acl       []byte
-}
+// // Access Control List block
+// type aclT struct {
+// 	aclHeader recordHeaderT
+// 	acl       []byte
+// }
 
-// Link Block
-type linkT struct {
-	linkHeader         recordHeaderT
-	linkResolutionName []byte
-}
+// // Link Block
+// type linkT struct {
+// 	linkHeader         recordHeaderT
+// 	linkResolutionName []byte
+// }
 
-// Start Block
-type startT struct {
-	startBlockHeader recordHeaderT
-}
+// // Start Block
+// type startT struct {
+// 	startBlockHeader recordHeaderT
+// }
 
 // Data Header Block
 type dataHeaderT struct {
@@ -108,12 +108,40 @@ type dataHeaderT struct {
 	alignmentCount WordT
 }
 
-// End Block
-type endT struct {
-	endBlockHeader recordHeaderT
+// // End Block
+// type endT struct {
+// 	endBlockHeader recordHeaderT
+// }
+
+// // End of Dump
+// type endOfDumpT struct {
+// 	endOfDumpHeader recordHeaderT
+// }
+
+type FstatEntry struct {
+	DgMnemonic string
+	Desc       string
 }
 
-// End of Dump
-type endOfDumpT struct {
-	endOfDumpHeader recordHeaderT
+type FstatEntryTypes map[byte]FstatEntry
+
+func KnownFstatEntryTypes() FstatEntryTypes {
+	//fet := make(FstatEntryTypes)
+	fet := FstatEntryTypes{
+		0:  {"FLNK", "=>Link=>"},
+		1:  {"FDSF", "System Data File"},
+		2:  {"FMTF", "Mag Tape File"},
+		3:  {"FGFN", "Generic File"},
+		10: {"FDIR", "<Directory>"},
+		11: {"FLDU", "LDU Directory Entry"},
+		12: {"FCPD", "Control Point Direectory"},
+		64: {"FUDF", "User Data File"},
+		66: {"FUPD", "User Profile"},
+		67: {"FSTF", "Symbol Table"},
+		68: {"FTXT", "Text File"},
+		69: {"FLOG", "System Log File"},
+		74: {"FPRV", "Program File"},
+		87: {"FPRG", "Program File"},
+	}
+	return fet
 }
