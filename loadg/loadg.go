@@ -45,6 +45,7 @@ var (
 	totalFileSize                 int
 	baseDir, fileName, workingDir string
 	writeFile                     *os.File
+	knownEntryTypes               FstatEntryTypes
 )
 
 func init() {
@@ -66,6 +67,7 @@ func init() {
 	if !version && dump == "" {
 		flag.PrintDefaults()
 	}
+	knownEntryTypes = KnownFstatEntryTypes()
 }
 
 func main() {
@@ -243,13 +245,11 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 	if summary && verbose {
 		fmt.Println()
 	}
-	loadIt = true
-	knownEntryTypes := KnownFstatEntryTypes()
 	thisEntryType, known := knownEntryTypes[fsbBlob[1]]
 	if known {
 		fileType = thisEntryType.Desc
-		switch thisEntryType.DgMnemonic {
-		case "FDIR", "FLDU", "FCPD":
+		loadIt = thisEntryType.HasPayload
+		if thisEntryType.IsDir {
 			workingDir = filepath.Join(workingDir, fileName)
 			if extract {
 				err := os.MkdirAll(workingDir, os.ModePerm)
@@ -260,12 +260,10 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 					}
 				}
 			}
-			loadIt = false
-		case "FLNK":
-			loadIt = false
 		}
 	} else {
 		fileType = "Unknown File"
+		loadIt = true
 	}
 
 	if summary {
@@ -275,12 +273,9 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 		} else {
 			displayPath = filepath.Join(workingDir, fileName)
 		}
-		fmt.Printf("%-18s: %-48s", fileType, displayPath)
-		if verbose { //|| fsbBlob[1] == fcpd || fsbBlob[1] == fdir || fsbBlob[1] == fldu {
-			switch thisEntryType.DgMnemonic {
-			case "FDIR", "FLDU", "FCPD":
-				fmt.Println()
-			}
+		fmt.Printf("%-20s: %-48s", fileType, displayPath)
+		if verbose || (known && thisEntryType.IsDir) {
+			fmt.Println()
 		} else {
 			fmt.Printf("\t")
 		}

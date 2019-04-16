@@ -121,25 +121,27 @@ type dataHeaderT struct {
 type FstatEntry struct {
 	DgMnemonic string
 	Desc       string
+	IsDir      bool
+	HasPayload bool
 }
 
 type FstatEntryTypes map[byte]FstatEntry
 
 func KnownFstatEntryTypes() FstatEntryTypes {
 	return FstatEntryTypes{
-		0:  {"FLNK", "=>Link=>"},
-		1:  {"FDSF", "System Data File"},
-		2:  {"FMTF", "Mag Tape File"},
-		3:  {"FGFN", "Generic File"},
-		10: {"FDIR", "<Directory>"},
-		11: {"FLDU", "LDU Directory Entry"},
-		12: {"FCPD", "Control Point Direectory"},
-		64: {"FUDF", "User Data File"},
-		66: {"FUPD", "User Profile"},
-		67: {"FSTF", "Symbol Table"},
-		68: {"FTXT", "Text File"},
-		69: {"FLOG", "System Log File"},
-		74: {"FPRV", "Program File"},
-		87: {"FPRG", "Program File"},
+		0:  {"FLNK", "=>Link=>", false, false},
+		1:  {"FDSF", "System Data File", false, true},
+		2:  {"FMTF", "Mag Tape File", false, true},
+		3:  {"FGFN", "Generic File", false, true},
+		10: {"FDIR", "<Directory>", true, false},
+		11: {"FLDU", "<LDU Directory>", true, false},
+		12: {"FCPD", "<Control Point Dir>", true, false},
+		64: {"FUDF", "User Data File", false, true},
+		66: {"FUPD", "User Profile", false, true},
+		67: {"FSTF", "Symbol Table", false, true},
+		68: {"FTXT", "Text File", false, true},
+		69: {"FLOG", "System Log File", false, true},
+		74: {"FPRV", "Program File", false, true},
+		87: {"FPRG", "Program File", false, true},
 	}
 }
