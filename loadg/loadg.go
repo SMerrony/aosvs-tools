@@ -64,9 +64,7 @@ func init() {
 	flag.BoolVar(&version, "version", false, "show the version number of loadg and exit")
 	flag.BoolVar(&version, "V", false, "show the version number of loadg and exit")
 	flag.Parse()
-	if !version && dump == "" {
-		flag.PrintDefaults()
-	}
+
 	knownEntryTypes = KnownFstatEntryTypes()
 }
 
@@ -76,6 +74,9 @@ func main() {
 		if !verbose {
 			return
 		}
+	}
+	if len(dump) == 0 {
+		log.Fatalln("ERROR: Must specify DUMP file name with -dumpFile <dumpfilename> option")
 	}
 	dumpFile, err := os.Open(dump)
 	if err != nil {
@@ -105,6 +106,8 @@ func main() {
 			fmt.Printf("Found block of type: %d, Length: %d\n", recHdr.recordType, recHdr.recordLength)
 		}
 		switch recHdr.recordType {
+		case startDumpType:
+			log.Fatalln("ERROR: Another START record found in DUMP - this should not happem.")
 		case fsbType:
 			fsbBlob = readBlob(recHdr.recordLength, dumpFile, "FSB")
 			loadIt = false
@@ -157,8 +160,7 @@ func processDataBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 		if verbose {
 			fmt.Printf("  Skipping %d alignment byte(s)\n", dhb.alignmentCount)
 		}
-		alignment := make([]byte, dhb.alignmentCount)
-		dumpFile.Read(alignment)
+		readBlob(int(dhb.alignmentCount), dumpFile, "alignment byte(s)")
 	}
 
 	dataBlob := readBlob(int(dhb.byteLength), dumpFile, "data block")
@@ -175,13 +177,16 @@ func processDataBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 				if verbose {
 					fmt.Println("  Padding with one block")
 				}
-				writeFile.Write(paddingBlock)
+				_, err := writeFile.Write(paddingBlock)
+				if err != nil {
+					log.Fatalf("ERROR: Could not write padding block due to %s", err.Error())
+				}
 				totalFileSize += diskBlockBytes
 			}
 		}
 		n, err := writeFile.Write(dataBlob)
 		if n != int(dhb.byteLength) || err != nil {
-			log.Fatalf("ERROR: Could not write out data due to %v", err)
+			log.Fatalf("ERROR: Could not write out data due to %s", err.Error())
 		}
 	}
 	totalFileSize += int(dhb.byteLength)
@@ -294,7 +299,7 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 		var err error
 		writeFile, err = os.Create(writePath)
 		if err != nil {
-			log.Printf("ERROR: Could not create file %s due to %v", writePath, err)
+			log.Printf("ERROR: Could not create file %s due to %s", writePath, err.Error())
 			if !ignoreErrors {
 				log.Fatalln("Giving up.")
 			}
@@ -313,10 +318,8 @@ func readBlob(byteLen int, dumpFile *os.File, desc string) []byte {
 }
 
 func readAWord(dumpFile *os.File) WordT {
-	var w WordT
 	twoBytes := readBlob(2, dumpFile, "DG Word")
-	w = WordT(twoBytes[0])<<8 | WordT(twoBytes[1])
-	return w
+	return WordT(twoBytes[0])<<8 | WordT(twoBytes[1])
 }
 
 func readHeader(dumpFile *os.File) recordHeaderT {
