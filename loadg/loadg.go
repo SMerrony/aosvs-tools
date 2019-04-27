@@ -31,7 +31,7 @@ import (
 	"strings"
 )
 
-const semVer = "v1.4.0"
+const semVer = "v1.4.1"
 
 // program flags (options)...
 var (
@@ -165,30 +165,33 @@ func processDataBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 
 	dataBlob := readBlob(int(dhb.byteLength), dumpFile, "data block")
 
-	if extract && writeFile != nil {
-		// large areas of NULLs may be skipped over by DUMP_II/III
-		// this is achieved by simply advancing the block address so
-		// we must pad out if block address is beyond end of last block
-		if int(dhb.byteAddress) > totalFileSize+1 {
-			paddingSize := int(dhb.byteAddress) - totalFileSize
-			paddingBlocks := paddingSize / diskBlockBytes
-			paddingBlock := make([]byte, diskBlockBytes)
-			for p := 0; p < paddingBlocks; p++ {
-				if verbose {
-					fmt.Println("  Padding with one block")
-				}
-				_, err := writeFile.Write(paddingBlock)
-				if err != nil {
-					log.Fatalf("ERROR: Could not write padding block due to %s", err.Error())
-				}
-				totalFileSize += diskBlockBytes
+	// large areas of NULLs may be skipped over by DUMP_II/III
+	// this is achieved by simply advancing the byte address so
+	// we must pad out if byte address is beyond end of last block
+	//if extract && writeFile != nil {
+
+	if int(dhb.byteAddress) > totalFileSize+1 {
+		paddingSize := int(dhb.byteAddress) - totalFileSize
+		//fmt.Printf("File Size: %d, BA: %d, Padding Size: %d\n", totalFileSize, int(dhb.byteAddress), paddingSize)
+		paddingBlock := make([]byte, paddingSize)
+		if extract {
+			if verbose {
+				fmt.Println("  Padding with one block")
+			}
+			_, err := writeFile.Write(paddingBlock)
+			if err != nil {
+				log.Fatalf("ERROR: Could not write padding block due to %s", err.Error())
 			}
 		}
+		totalFileSize += paddingSize
+	}
+	if extract {
 		n, err := writeFile.Write(dataBlob)
 		if n != int(dhb.byteLength) || err != nil {
 			log.Fatalf("ERROR: Could not write out data due to %s", err.Error())
 		}
 	}
+	//}
 	totalFileSize += int(dhb.byteLength)
 	inFile = true
 }
