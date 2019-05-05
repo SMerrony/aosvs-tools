@@ -45,7 +45,6 @@ var (
 	totalFileSize                 int
 	baseDir, fileName, workingDir string
 	writeFile                     *os.File
-	knownEntryTypes               FstatEntryTypes
 )
 
 func init() {
@@ -64,8 +63,6 @@ func init() {
 	flag.BoolVar(&version, "version", false, "show the version number of loadg and exit")
 	flag.BoolVar(&version, "V", false, "show the version number of loadg and exit")
 	flag.Parse()
-
-	knownEntryTypes = KnownFstatEntryTypes()
 }
 
 func main() {
@@ -253,7 +250,7 @@ func processNameBlock(recHeader recordHeaderT, fsbBlob []byte, dumpFile *os.File
 	if summary && verbose {
 		fmt.Println()
 	}
-	thisEntryType, known := knownEntryTypes[fsbBlob[1]]
+	thisEntryType, known := KnownFstatEntryTypes[fsbBlob[1]]
 	if known {
 		fileType = thisEntryType.Desc
 		loadIt = thisEntryType.HasPayload

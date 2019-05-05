@@ -126,25 +126,20 @@ type FstatEntry struct {
 	HasPayload bool
 }
 
-// FstatEntryTypes maps DG numeric FSTAT ID to FSTAT entries
-type FstatEntryTypes map[byte]FstatEntry
-
-// KnownFstatEntryTypes returns a map of FSTAT IDs to FSTAT entries
-func KnownFstatEntryTypes() FstatEntryTypes {
-	return FstatEntryTypes{
-		0:  {DgMnemonic: "FLNK", Desc: "=>Link=>", IsDir: false, HasPayload: false},
-		1:  {DgMnemonic: "FDSF", Desc: "System Data File", IsDir: false, HasPayload: true},
-		2:  {DgMnemonic: "FMTF", Desc: "Mag Tape File", IsDir: false, HasPayload: true},
-		3:  {DgMnemonic: "FGFN", Desc: "Generic File", IsDir: false, HasPayload: true},
-		10: {DgMnemonic: "FDIR", Desc: "<Directory>", IsDir: true, HasPayload: false},
-		11: {DgMnemonic: "FLDU", Desc: "<LDU Directory>", IsDir: true, HasPayload: false},
-		12: {DgMnemonic: "FCPD", Desc: "<Control Point Dir>", IsDir: true, HasPayload: false},
-		64: {DgMnemonic: "FUDF", Desc: "User Data File", IsDir: false, HasPayload: true},
-		66: {DgMnemonic: "FUPD", Desc: "User Profile", IsDir: false, HasPayload: true},
-		67: {DgMnemonic: "FSTF", Desc: "Symbol Table", IsDir: false, HasPayload: true},
-		68: {DgMnemonic: "FTXT", Desc: "Text File", IsDir: false, HasPayload: true},
-		69: {DgMnemonic: "FLOG", Desc: "System Log File", IsDir: false, HasPayload: true},
-		74: {DgMnemonic: "FPRV", Desc: "Program File", IsDir: false, HasPayload: true},
-		87: {DgMnemonic: "FPRG", Desc: "Program File", IsDir: false, HasPayload: true},
-	}
+// KnownFstatEntryTypes is a map of FSTAT IDs to FSTAT entries
+var KnownFstatEntryTypes = map[byte]FstatEntry{
+	0:  {DgMnemonic: "FLNK", Desc: "=>Link=>", IsDir: false, HasPayload: false},
+	1:  {DgMnemonic: "FDSF", Desc: "System Data File", IsDir: false, HasPayload: true},
+	2:  {DgMnemonic: "FMTF", Desc: "Mag Tape File", IsDir: false, HasPayload: true},
+	3:  {DgMnemonic: "FGFN", Desc: "Generic File", IsDir: false, HasPayload: true},
+	10: {DgMnemonic: "FDIR", Desc: "<Directory>", IsDir: true, HasPayload: false},
+	11: {DgMnemonic: "FLDU", Desc: "<LDU Directory>", IsDir: true, HasPayload: false},
+	12: {DgMnemonic: "FCPD", Desc: "<Control Point Dir>", IsDir: true, HasPayload: false},
+	64: {DgMnemonic: "FUDF", Desc: "User Data File", IsDir: false, HasPayload: true},
+	66: {DgMnemonic: "FUPD", Desc: "User Profile", IsDir: false, HasPayload: true},
+	67: {DgMnemonic: "FSTF", Desc: "Symbol Table", IsDir: false, HasPayload: true},
+	68: {DgMnemonic: "FTXT", Desc: "Text File", IsDir: false, HasPayload: true},
+	69: {DgMnemonic: "FLOG", Desc: "System Log File", IsDir: false, HasPayload: true},
+	74: {DgMnemonic: "FPRV", Desc: "Program File", IsDir: false, HasPayload: true},
+	87: {DgMnemonic: "FPRG", Desc: "Program File", IsDir: false, HasPayload: true},
 }
